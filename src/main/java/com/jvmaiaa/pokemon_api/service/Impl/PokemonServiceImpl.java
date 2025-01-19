@@ -8,7 +8,6 @@ import com.jvmaiaa.pokemon_api.service.PokemonService;
 import com.jvmaiaa.pokemon_api.sort.AlphabeticalSortStrategy;
 import com.jvmaiaa.pokemon_api.sort.LengthSortStrategy;
 import com.jvmaiaa.pokemon_api.sort.SortStrategy;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -21,12 +20,10 @@ import java.util.stream.Collectors;
 public class PokemonServiceImpl implements PokemonService {
 
     private final WebClient webClient;
-    private static final String POKE_API_URL = "https://pokeapi.co/api/v2";
 
-    public PokemonServiceImpl(WebClient.Builder webClient) {
-        this.webClient = webClient.baseUrl(POKE_API_URL).build();
+    public PokemonServiceImpl(WebClient webClient) {
+        this.webClient = webClient;
     }
-
 
     @Override
     public PokemonResultDTO<String> exibeNomeDosPokemons(String query, String sortType) {
@@ -70,14 +67,6 @@ public class PokemonServiceImpl implements PokemonService {
                     .collect(Collectors.toList());
         }
         return Collections.emptyList();
-    }
-
-    private PokemonResultDTO<PokemonHighlightDTO> fetchHighlightedPokemon() {
-        return webClient.get()
-                .uri("/pokemon/highlight")
-                .retrieve()
-                .bodyToMono(new ParameterizedTypeReference<PokemonResultDTO<PokemonHighlightDTO>>() {})
-                .block();
     }
 
     private List<String> filtraPokemons(List<String> pokemons, String query) {
