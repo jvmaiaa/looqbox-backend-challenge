@@ -6,3 +6,11 @@
 # Datasource local storage ignored files
 /dataSources/
 /dataSources.local.xml
+
+# Arquivos do graddle para não subir
+../build
+../HELP.md
+/build/
+/HELP.md
+../gradle
+
