@@ -5,7 +5,7 @@ import com.jvmaiaa.pokemon_api.dto.PokemonResultDTO;
 
 public interface PokemonService {
 
-    PokemonResultDTO<String> exibeNomeDosPokemons(String query, String sortType);
-    PokemonResultDTO<PokemonHighlightDTO> exibeNomeEPrefixoDosPokemons(String query, String sortType);
+    PokemonResultDTO<String> exibeNomeDosPokemons(String query, String sort);
+    PokemonResultDTO<PokemonHighlightDTO> exibeNomeEPrefixoDosPokemons(String query, String sort);
 
 }
