@@ -1,6 +1,7 @@
 package com.jvmaiaa.pokemon_api.utils;
 
 import com.jvmaiaa.pokemon_api.dto.PokeApiResponse;
+import com.jvmaiaa.pokemon_api.dto.PokemonHighlightDTO;
 import com.jvmaiaa.pokemon_api.dto.PokemonNameDTO;
 import com.jvmaiaa.pokemon_api.infra.exception.SortInvalidException;
 
@@ -15,7 +16,7 @@ public class VerificaEConverte {
     }
 
     public static List<String> filtraPokemonsPeloNomeBuscado(List<String> pokemons, String nomeBuscado) {
-        if (campoVazioOuNulo(nomeBuscado)){
+        if (isCampoVazioOuNulo(nomeBuscado)){
             return pokemons;
         }
 
@@ -28,6 +29,24 @@ public class VerificaEConverte {
         return pokemonsFiltrados;
     }
 
+    public static List<PokemonHighlightDTO> filtraPokemonsPeloNomeBuscadoComPrefixo(List<String> pokemons, String nomeBuscado) {
+        // Se não houver query, retorna todos com prefixo vazio
+        if (isCampoVazioOuNulo(nomeBuscado)) {
+            return pokemons.stream()
+                    .map(name -> new PokemonHighlightDTO(name, name))
+                    .toList();
+        }
+
+        // Filtra e cria os objetos destacados
+        return pokemons.stream()
+                .filter(pokemonAtual -> pokemonAtual != null && pokemonAtual.toLowerCase().contains(nomeBuscado.toLowerCase()))
+                .map(pokemonAtual -> new PokemonHighlightDTO(
+                        pokemonAtual,
+                        destacaCorrespondencia(pokemonAtual, nomeBuscado)
+                ))
+                .toList();
+    }
+
     public static List<String> extraiNomes(PokeApiResponse response) {
         return response.getResults()
                 .stream()
@@ -35,12 +54,18 @@ public class VerificaEConverte {
                 .collect(Collectors.toList());
     }
 
-    public static boolean campoVazioOuNulo(String campo) {
-        return (campo != null && !campo.isEmpty());
+    public static List<String> extraiNomesComPrefixo(List<PokemonHighlightDTO> response) {
+        return response.stream()
+                .map(PokemonHighlightDTO::getName)
+                .toList();
     }
 
-    public static String setaValorDaOrdenacao(String tipoDeOrdenacao) {
-        if (campoVazioOuNulo(tipoDeOrdenacao)) {
+    public static boolean isCampoVazioOuNulo(String campo) {
+        return (campo == null || campo.isEmpty());
+    }
+
+    public static String setaTipoOrdenacao(String tipoDeOrdenacao) {
+        if (isCampoVazioOuNulo(tipoDeOrdenacao)) {
             tipoDeOrdenacao = "ALPHABETICAL";
         }
         return switch (tipoDeOrdenacao.toUpperCase()) {
@@ -48,6 +73,11 @@ public class VerificaEConverte {
             case "ALPHABETICAL" -> "ALPHABETICAL";
             default -> throw new SortInvalidException("Tipo de ordenação inválida: " + tipoDeOrdenacao);
         };
+    }
+
+    private static String destacaCorrespondencia(String name, String query) {
+        if (query == null || query.isEmpty()) return name;
+        return name.replaceAll("(?i)(" + query + ")", "<pre>$1</pre>");
     }
 
 }

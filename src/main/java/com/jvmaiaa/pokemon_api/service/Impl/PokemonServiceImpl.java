@@ -10,15 +10,16 @@ import com.jvmaiaa.pokemon_api.service.strategy.SortStrategy;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.jvmaiaa.pokemon_api.utils.VerificaEConverte.extraiNomes;
 import static com.jvmaiaa.pokemon_api.utils.VerificaEConverte.filtraPokemonsPeloNomeBuscado;
+import static com.jvmaiaa.pokemon_api.utils.VerificaEConverte.filtraPokemonsPeloNomeBuscadoComPrefixo;
 import static com.jvmaiaa.pokemon_api.utils.VerificaEConverte.responseVazio;
-import static com.jvmaiaa.pokemon_api.utils.VerificaEConverte.setaValorDaOrdenacao;
+import static com.jvmaiaa.pokemon_api.utils.VerificaEConverte.setaTipoOrdenacao;
 
 @Service
 public class PokemonServiceImpl implements PokemonService {
@@ -34,58 +35,7 @@ public class PokemonServiceImpl implements PokemonService {
         this.webClient = webClient;
     }
 
-    @Override
-    public PokemonResultDTO<String> exibeNomeDosPokemons(String query, String sort) {
-        List<String> pokemons = buscaNomesPokemonEmApiExterna();
-        List<String> pokemonsFiltradosPelaQuery = filtraPokemonsPeloNomeBuscado(pokemons, query); // filtra pokemons pelo nome buscado
-        mapStrategy.get(sort).ordenaLista(pokemonsFiltradosPelaQuery); // Ordena a partir do strategy que será definido pelo argumento
-        return new PokemonResultDTO<>(pokemonsFiltradosPelaQuery);
-    }
-
-    @Override
-    public PokemonResultDTO<PokemonHighlightDTO> exibeNomeEPrefixoDosPokemons(String query, String sort) {
-        List<String> pokemons = buscaNomesPokemonEmApiExterna();
-
-        List<PokemonHighlightDTO> highlighted = new ArrayList<>();
-        for (String name : pokemons) {
-            if (query == null || name.toLowerCase().contains(query.toLowerCase())) {
-                String highlightedName = destacaCorrespondencia(name, query);
-                highlighted.add(new PokemonHighlightDTO(name, highlightedName));
-            }
-        }
-
-        // Ordena os pokémons destacados
-        ordenaPokemonsHighlight(highlighted, sort);
-
-        return new PokemonResultDTO<>(highlighted);
-    }
-
-    private List<String> buscaNomesPokemonEmApiExterna() {
-        PokeApiResponse response = requestToPokeApi();
-        return (responseVazio(response))
-                ? extraiNomes(response)
-                : Collections.emptyList();
-    }
-
-    private void ordenaPokemonsHighlight(List<PokemonHighlightDTO> pokemons, String sortType) {
-        setaValorDaOrdenacao(sortType);
-        // Extrai os nomes, ordena, e reatribui os nomes ordenados.
-        List<String> pokemonNames = pokemons.stream()
-                .map(PokemonHighlightDTO::getName)
-                .toList();
-
-        List<String> sortedNames = sortStrategy.ordenaLista(new ArrayList<>(pokemonNames));
-
-        // Atualiza os objetos PokemonHighlightDTO com a ordem correta
-        pokemons.sort((a, b) -> sortedNames.indexOf(a.getName()) - sortedNames.indexOf(b.getName()));
-    }
-
-    private String destacaCorrespondencia(String name, String query) {
-        if (query == null || query.isEmpty()) return name;
-        return name.replaceAll("(?i)(" + query + ")", "<pre>$1</pre>");
-    }
-
-    private PokeApiResponse requestToPokeApi() {
+    private PokeApiResponse requestToPokeApi() { // tô fazendo minha requisação para PokeAPI
         return webClient.get()
                 .uri("/pokemon?limit=2000")
                 .retrieve()
@@ -93,6 +43,34 @@ public class PokemonServiceImpl implements PokemonService {
                 .block();
     }
 
+    private List<String> buscaNomesPokemonEmApiExterna() { // busca os nomes a partir do JSON retornado
+        PokeApiResponse response = requestToPokeApi();
+        return (responseVazio(response))
+                ? extraiNomes(response)
+                : Collections.emptyList();
+    }
+
+    @Override // tipoOrdenacao -> faz requestAPI -> filtra -> ordena -> retorna
+    public PokemonResultDTO<String> exibeNomeDosPokemons(String query, String sort) {
+        String tipoOrdenacao = setaTipoOrdenacao(sort);
+        List<String> pokemons = buscaNomesPokemonEmApiExterna();
+        List<String> pokemonsFiltradosPelaQuery = filtraPokemonsPeloNomeBuscado(pokemons, query); // filtra pokemons pelo nome buscado
+        mapStrategy.get(tipoOrdenacao).ordenaLista(pokemonsFiltradosPelaQuery); // ordena a partir do strategy que será definido pelo argumento
+        return new PokemonResultDTO<>(pokemonsFiltradosPelaQuery);
+    }
+
+    @Override
+    public PokemonResultDTO<PokemonHighlightDTO> exibeNomeEPrefixoDosPokemons(String query, String sort) {
+        String tipoOrdenacao = setaTipoOrdenacao(sort);
+        List<String> pokemons = buscaNomesPokemonEmApiExterna();
+        List<PokemonHighlightDTO> pokemonsFiltradosPelaQuery = filtraPokemonsPeloNomeBuscadoComPrefixo(pokemons, query);
+
+        mapStrategy.get(tipoOrdenacao).ordenaLista(
+                pokemonsFiltradosPelaQuery.stream()
+                        .map(PokemonHighlightDTO::getName)
+                        .collect(Collectors.toList()));
+        return new PokemonResultDTO<>(pokemonsFiltradosPelaQuery);
+    }
 
 }
 
