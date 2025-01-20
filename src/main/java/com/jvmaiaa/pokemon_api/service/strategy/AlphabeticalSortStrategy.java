@@ -1,11 +1,11 @@
-package com.jvmaiaa.pokemon_api.sort;
+package com.jvmaiaa.pokemon_api.service.strategy;
 
 import java.util.List;
 
 public class AlphabeticalSortStrategy implements SortStrategy {
 
     @Override
-    public List<String> sort(List<String> listaDePokemons) {
+    public List<String> ordenaLista(List<String> listaDePokemons) {
         int tamanhoDaLista = listaDePokemons.size(); // n
         for (int i = 0; i < tamanhoDaLista - 1; i++) { // n-1
             for (int j = 0; j < tamanhoDaLista - i - 1; j++) { // (n^2) - 1

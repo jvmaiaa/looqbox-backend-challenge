@@ -2,22 +2,31 @@ package com.jvmaiaa.pokemon_api.service.Impl;
 
 import com.jvmaiaa.pokemon_api.dto.PokeApiResponse;
 import com.jvmaiaa.pokemon_api.dto.PokemonHighlightDTO;
-import com.jvmaiaa.pokemon_api.dto.PokemonNameDTO;
 import com.jvmaiaa.pokemon_api.dto.PokemonResultDTO;
 import com.jvmaiaa.pokemon_api.service.PokemonService;
-import com.jvmaiaa.pokemon_api.sort.AlphabeticalSortStrategy;
-import com.jvmaiaa.pokemon_api.sort.LengthSortStrategy;
-import com.jvmaiaa.pokemon_api.sort.SortStrategy;
+import com.jvmaiaa.pokemon_api.service.strategy.AlphabeticalSortStrategy;
+import com.jvmaiaa.pokemon_api.service.strategy.LengthSortStrategy;
+import com.jvmaiaa.pokemon_api.service.strategy.SortStrategy;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
+
+import static com.jvmaiaa.pokemon_api.utils.VerificaEConverte.extraiNomes;
+import static com.jvmaiaa.pokemon_api.utils.VerificaEConverte.filtraPokemonsPeloNomeBuscado;
+import static com.jvmaiaa.pokemon_api.utils.VerificaEConverte.responseVazio;
+import static com.jvmaiaa.pokemon_api.utils.VerificaEConverte.setaValorDaOrdenacao;
 
 @Service
 public class PokemonServiceImpl implements PokemonService {
+
+    private final Map<String, SortStrategy> mapStrategy = Map.of(
+            "ALPHABETICAL", new AlphabeticalSortStrategy(),
+            "LENGTH", new LengthSortStrategy()
+    );
 
     private final WebClient webClient;
 
@@ -26,18 +35,16 @@ public class PokemonServiceImpl implements PokemonService {
     }
 
     @Override
-    public PokemonResultDTO<String> exibeNomeDosPokemons(String query, String sortType) {
-        List<String> pokemons = fetchAllPokemonNames();
-        // Filtra os pokémons pelo nome, se houver query
-        List<String> filtered = filtraPokemons(pokemons, query);
-        // Ordena conforme o parâmetro
-        ordenaPokemons(filtered, sortType);
-        return new PokemonResultDTO<>(filtered);
+    public PokemonResultDTO<String> exibeNomeDosPokemons(String query, String sort) {
+        List<String> pokemons = buscaNomesPokemonEmApiExterna();
+        List<String> pokemonsFiltradosPelaQuery = filtraPokemonsPeloNomeBuscado(pokemons, query); // filtra pokemons pelo nome buscado
+        mapStrategy.get(sort).ordenaLista(pokemonsFiltradosPelaQuery); // Ordena a partir do strategy que será definido pelo argumento
+        return new PokemonResultDTO<>(pokemonsFiltradosPelaQuery);
     }
 
     @Override
-    public PokemonResultDTO<PokemonHighlightDTO> exibeNomeEPrefixoDosPokemons(String query, String sortType) {
-        List<String> pokemons = fetchAllPokemonNames();
+    public PokemonResultDTO<PokemonHighlightDTO> exibeNomeEPrefixoDosPokemons(String query, String sort) {
+        List<String> pokemons = buscaNomesPokemonEmApiExterna();
 
         List<PokemonHighlightDTO> highlighted = new ArrayList<>();
         for (String name : pokemons) {
@@ -48,54 +55,26 @@ public class PokemonServiceImpl implements PokemonService {
         }
 
         // Ordena os pokémons destacados
-        ordenaPokemonsHighlight(highlighted, sortType);
+        ordenaPokemonsHighlight(highlighted, sort);
 
         return new PokemonResultDTO<>(highlighted);
     }
 
-    private List<String> fetchAllPokemonNames() {
-        PokeApiResponse response = webClient.get()
-                .uri("/pokemon?limit=2000")
-                .retrieve()
-                .bodyToMono(PokeApiResponse.class)
-                .block();
-
-        if (response != null && response.getResults() != null) {
-            // Extrai apenas os nomes da lista de objetos
-            return response.getResults().stream()
-                    .map(PokemonNameDTO::getName)
-                    .collect(Collectors.toList());
-        }
-        return Collections.emptyList();
-    }
-
-    private List<String> filtraPokemons(List<String> pokemons, String query) {
-        if (query == null || query.isEmpty()) return pokemons;
-
-        List<String> filtered = new ArrayList<>();
-        String lowerQuery = query.toLowerCase();
-
-        for (String name : pokemons) {
-            if (name.toLowerCase().contains(lowerQuery)) {
-                filtered.add(name);
-            }
-        }
-        return filtered;
-    }
-
-    private void ordenaPokemons(List<String> pokemons, String sortType) {
-        SortStrategy sortStrategy = getSortStrategy(sortType);
-        sortStrategy.sort(pokemons);
+    private List<String> buscaNomesPokemonEmApiExterna() {
+        PokeApiResponse response = requestToPokeApi();
+        return (responseVazio(response))
+                ? extraiNomes(response)
+                : Collections.emptyList();
     }
 
     private void ordenaPokemonsHighlight(List<PokemonHighlightDTO> pokemons, String sortType) {
-        SortStrategy sortStrategy = getSortStrategy(sortType);
+        setaValorDaOrdenacao(sortType);
         // Extrai os nomes, ordena, e reatribui os nomes ordenados.
         List<String> pokemonNames = pokemons.stream()
                 .map(PokemonHighlightDTO::getName)
                 .toList();
 
-        List<String> sortedNames = sortStrategy.sort(new ArrayList<>(pokemonNames));
+        List<String> sortedNames = sortStrategy.ordenaLista(new ArrayList<>(pokemonNames));
 
         // Atualiza os objetos PokemonHighlightDTO com a ordem correta
         pokemons.sort((a, b) -> sortedNames.indexOf(a.getName()) - sortedNames.indexOf(b.getName()));
@@ -106,16 +85,14 @@ public class PokemonServiceImpl implements PokemonService {
         return name.replaceAll("(?i)(" + query + ")", "<pre>$1</pre>");
     }
 
-    private SortStrategy getSortStrategy(String sortType) {
-        if (sortType == null || sortType.isEmpty()) {
-            sortType = "ALPHABETICAL";
-        }
-        return switch (sortType.toUpperCase()) {
-            case "LENGTH" -> new LengthSortStrategy();
-            case "ALPHABETICAL" -> new AlphabeticalSortStrategy();
-            default -> throw new IllegalArgumentException("Invalid sort type: " + sortType);
-        };
+    private PokeApiResponse requestToPokeApi() {
+        return webClient.get()
+                .uri("/pokemon?limit=2000")
+                .retrieve()
+                .bodyToMono(PokeApiResponse.class)
+                .block();
     }
+
 
 }
 

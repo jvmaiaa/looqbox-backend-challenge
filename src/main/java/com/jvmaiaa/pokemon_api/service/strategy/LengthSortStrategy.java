@@ -1,11 +1,11 @@
-package com.jvmaiaa.pokemon_api.sort;
+package com.jvmaiaa.pokemon_api.service.strategy;
 
 import java.util.List;
 
 public class LengthSortStrategy implements SortStrategy {
 
     @Override
-    public List<String> sort(List<String> listaDePokemons) {
+    public List<String> ordenaLista(List<String> listaDePokemons) {
         int n = listaDePokemons.size(); // n
         for (int i = 0; i < n - 1; i++) { // n - 1
             for (int j = 0; j < n - i - 1; j++) { // n^2 - 1
