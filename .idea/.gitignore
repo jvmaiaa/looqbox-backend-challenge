@@ -13,4 +13,6 @@
 /build/
 /HELP.md
 ../gradle
+.build/
+.gradle/
 

@@ -3,12 +3,12 @@ package com.jvmaiaa.pokemon_api.service.Impl;
 import com.jvmaiaa.pokemon_api.dto.PokeApiResponse;
 import com.jvmaiaa.pokemon_api.dto.PokemonHighlightDTO;
 import com.jvmaiaa.pokemon_api.dto.PokemonResultDTO;
+import com.jvmaiaa.pokemon_api.service.ConsomePokeAPI;
 import com.jvmaiaa.pokemon_api.service.PokemonService;
 import com.jvmaiaa.pokemon_api.service.strategy.AlphabeticalSortStrategy;
 import com.jvmaiaa.pokemon_api.service.strategy.LengthSortStrategy;
 import com.jvmaiaa.pokemon_api.service.strategy.SortStrategy;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.Collections;
 import java.util.List;
@@ -24,31 +24,18 @@ import static com.jvmaiaa.pokemon_api.utils.VerificaEConverte.setaTipoOrdenacao;
 @Service
 public class PokemonServiceImpl implements PokemonService {
 
+    private final ConsomePokeAPI consomePokeAPI;
+
+    public PokemonServiceImpl(ConsomePokeAPI consomePokeAPI) {
+        this.consomePokeAPI = consomePokeAPI;
+    }
+
+    // tô implementando o padrão Strategy com auxília do Map para palavras-chave
     private final Map<String, SortStrategy> mapStrategy = Map.of(
             "ALPHABETICAL", new AlphabeticalSortStrategy(),
             "LENGTH", new LengthSortStrategy()
     );
 
-    private final WebClient webClient;
-
-    public PokemonServiceImpl(WebClient webClient) {
-        this.webClient = webClient;
-    }
-
-    private PokeApiResponse requestToPokeApi() { // tô fazendo minha requisação para PokeAPI
-        return webClient.get()
-                .uri("/pokemon?limit=2000")
-                .retrieve()
-                .bodyToMono(PokeApiResponse.class)
-                .block();
-    }
-
-    private List<String> buscaNomesPokemonEmApiExterna() { // busca os nomes a partir do JSON retornado
-        PokeApiResponse response = requestToPokeApi();
-        return (responseVazio(response))
-                ? extraiNomes(response)
-                : Collections.emptyList();
-    }
 
     @Override // tipoOrdenacao -> faz requestAPI -> filtra -> ordena -> retorna
     public PokemonResultDTO<String> exibeNomeDosPokemons(String query, String sort) {
@@ -72,5 +59,11 @@ public class PokemonServiceImpl implements PokemonService {
         return new PokemonResultDTO<>(pokemonsFiltradosPelaQuery);
     }
 
+    private List<String> buscaNomesPokemonEmApiExterna() { // busca os nomes a partir do JSON retornado
+        PokeApiResponse response = consomePokeAPI.requestToPokeApi();
+        return (responseVazio(response))
+                ? extraiNomes(response)
+                : Collections.emptyList();
+    }
 }
 
