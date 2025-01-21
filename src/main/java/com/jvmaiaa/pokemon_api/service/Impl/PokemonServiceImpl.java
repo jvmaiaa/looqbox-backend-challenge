@@ -13,16 +13,17 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static com.jvmaiaa.pokemon_api.utils.VerificaEConverte.OrdenaPokemons;
 import static com.jvmaiaa.pokemon_api.utils.VerificaEConverte.extraiNomes;
 import static com.jvmaiaa.pokemon_api.utils.VerificaEConverte.filtraPokemonsPeloNomeBuscado;
-import static com.jvmaiaa.pokemon_api.utils.VerificaEConverte.filtraPokemonsPeloNomeBuscadoComPrefixo;
 import static com.jvmaiaa.pokemon_api.utils.VerificaEConverte.responseVazio;
 import static com.jvmaiaa.pokemon_api.utils.VerificaEConverte.setaTipoOrdenacao;
+import static com.jvmaiaa.pokemon_api.utils.VerificaEConverte.transformaListaComPrefixo;
+import static com.jvmaiaa.pokemon_api.utils.VerificaEConverte.transformaNomesComPrefixoEmString;
 
 @Service
 public class PokemonServiceImpl implements PokemonService {
@@ -49,28 +50,21 @@ public class PokemonServiceImpl implements PokemonService {
         return new PokemonResultDTO<>(pokemonsFiltradosPelaQuery);
     }
 
+    // 1 defino o tipo de ordenacao
+    // 2 Pego nomes em API externa
+    // 3 crio lista vazia e adiciono apenas os pokemons que possuem a parte do nome buscado
+    // 4 tranformo os pokemons que possuem a parte do nome buscado em string
+    // 5 ordeno a lista de pokemons que possuem a parte do nome buscado
+    // 6 Transformo a lista de String em PokemonHighlightDTO pora ter o retorno desejado
     @Override
     public PokemonResultDTO<PokemonHighlightDTO> exibeNomeEPrefixoDosPokemons(String query, String sort) {
         String tipoOrdenacao = setaTipoOrdenacao(sort);
         List<String> pokemons = buscaNomesPokemonEmApiExterna();
         List<PokemonHighlightDTO> highlightDTOS = new ArrayList<>();
-        for (String name : pokemons) {
-            if (query == null || name.toLowerCase().contains(query.toLowerCase())) {
-                String highlightedName = VerificaEConverte.destacaCorrespondencia(name, query);
-                highlightDTOS.add(new PokemonHighlightDTO(name, highlightedName));
-            }
-        }
-
-        List<String> nomesPokemons = highlightDTOS.stream() // to ordenando a lista de highlightDTOS
-                .map(PokemonHighlightDTO::getName)
-                .collect(Collectors.toList());
-
-        mapStrategy.get(tipoOrdenacao).ordenaLista(nomesPokemons);
-
-        List<PokemonHighlightDTO> pokemonsOrdenados = nomesPokemons.stream()
-                .map(name -> new PokemonHighlightDTO(name, VerificaEConverte.destacaCorrespondencia(name, query)))
-                .collect(Collectors.toList());
-
+        transformaListaComPrefixo(highlightDTOS, pokemons, query);
+        List<String> nomesPrefixoToString = transformaNomesComPrefixoEmString(highlightDTOS);
+        mapStrategy.get(tipoOrdenacao).ordenaLista(nomesPrefixoToString);
+        List<PokemonHighlightDTO> pokemonsOrdenados = OrdenaPokemons(nomesPrefixoToString, query);
         return new PokemonResultDTO<>(pokemonsOrdenados);
     }
 

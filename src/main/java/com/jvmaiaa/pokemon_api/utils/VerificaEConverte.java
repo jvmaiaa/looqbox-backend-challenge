@@ -29,24 +29,6 @@ public class VerificaEConverte {
         return pokemonsFiltrados;
     }
 
-    public static List<PokemonHighlightDTO> filtraPokemonsPeloNomeBuscadoComPrefixo(List<String> pokemons, String nomeBuscado) {
-        // Se não houver query, retorna todos com prefixo vazio
-        if (isCampoVazioOuNulo(nomeBuscado)) {
-            return pokemons.stream()
-                    .map(name -> new PokemonHighlightDTO(name, name))
-                    .toList();
-        }
-
-        // Filtra e cria os objetos destacados
-        return pokemons.stream()
-                .filter(pokemonAtual -> pokemonAtual != null && pokemonAtual.toLowerCase().contains(nomeBuscado.toLowerCase()))
-                .map(pokemonAtual -> new PokemonHighlightDTO(
-                        pokemonAtual,
-                        destacaCorrespondencia(pokemonAtual, nomeBuscado)
-                ))
-                .toList();
-    }
-
     public static List<String> extraiNomes(PokeApiResponse response) {
         return response.getResults()
                 .stream()
@@ -76,8 +58,34 @@ public class VerificaEConverte {
     }
 
     public static String destacaCorrespondencia(String name, String query) {
-        if (query == null || query.isEmpty()) return name;
+        if (isCampoVazioOuNulo(query)){
+            return name;
+        }
         return name.replaceAll("(?i)(" + query + ")", "<pre>$1</pre>");
     }
+
+    public static void transformaListaComPrefixo(List<PokemonHighlightDTO> listaDePokemonHighlightDTO,
+                                                 List<String> listaDePokemonsBuscadosNaApi,
+                                                 String nomeBuscado) {
+        for (String name : listaDePokemonsBuscadosNaApi) {
+            if (nomeBuscado == null || name.toLowerCase().contains(nomeBuscado.toLowerCase())) {
+                String highlightedName = destacaCorrespondencia(name, nomeBuscado);
+                listaDePokemonHighlightDTO.add(new PokemonHighlightDTO(name, highlightedName));
+            }
+        }
+    }
+
+    public static List<String> transformaNomesComPrefixoEmString(List<PokemonHighlightDTO> listaDePokemonHighlightDTO) {
+        return listaDePokemonHighlightDTO.stream()
+                .map(PokemonHighlightDTO::getName)
+                .collect(Collectors.toList());
+    }
+
+    public static List<PokemonHighlightDTO> OrdenaPokemons(List<String> listaDeNomesComPrefixoBuscado, String nomeBuscado){
+        return listaDeNomesComPrefixoBuscado.stream()
+                .map(name -> new PokemonHighlightDTO(name, destacaCorrespondencia(name, nomeBuscado)))
+                .collect(Collectors.toList());
+    }
+
 
 }
