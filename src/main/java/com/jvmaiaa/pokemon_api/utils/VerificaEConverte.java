@@ -75,7 +75,7 @@ public class VerificaEConverte {
         };
     }
 
-    private static String destacaCorrespondencia(String name, String query) {
+    public static String destacaCorrespondencia(String name, String query) {
         if (query == null || query.isEmpty()) return name;
         return name.replaceAll("(?i)(" + query + ")", "<pre>$1</pre>");
     }

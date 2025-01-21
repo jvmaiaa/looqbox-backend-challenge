@@ -8,9 +8,12 @@ import com.jvmaiaa.pokemon_api.service.PokemonService;
 import com.jvmaiaa.pokemon_api.service.strategy.AlphabeticalSortStrategy;
 import com.jvmaiaa.pokemon_api.service.strategy.LengthSortStrategy;
 import com.jvmaiaa.pokemon_api.service.strategy.SortStrategy;
+import com.jvmaiaa.pokemon_api.utils.VerificaEConverte;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -50,13 +53,25 @@ public class PokemonServiceImpl implements PokemonService {
     public PokemonResultDTO<PokemonHighlightDTO> exibeNomeEPrefixoDosPokemons(String query, String sort) {
         String tipoOrdenacao = setaTipoOrdenacao(sort);
         List<String> pokemons = buscaNomesPokemonEmApiExterna();
-        List<PokemonHighlightDTO> pokemonsFiltradosPelaQuery = filtraPokemonsPeloNomeBuscadoComPrefixo(pokemons, query);
+        List<PokemonHighlightDTO> highlightDTOS = new ArrayList<>();
+        for (String name : pokemons) {
+            if (query == null || name.toLowerCase().contains(query.toLowerCase())) {
+                String highlightedName = VerificaEConverte.destacaCorrespondencia(name, query);
+                highlightDTOS.add(new PokemonHighlightDTO(name, highlightedName));
+            }
+        }
 
-        mapStrategy.get(tipoOrdenacao).ordenaLista(
-                pokemonsFiltradosPelaQuery.stream()
-                        .map(PokemonHighlightDTO::getName)
-                        .collect(Collectors.toList()));
-        return new PokemonResultDTO<>(pokemonsFiltradosPelaQuery);
+        List<String> nomesPokemons = highlightDTOS.stream() // to ordenando a lista de highlightDTOS
+                .map(PokemonHighlightDTO::getName)
+                .collect(Collectors.toList());
+
+        mapStrategy.get(tipoOrdenacao).ordenaLista(nomesPokemons);
+
+        List<PokemonHighlightDTO> pokemonsOrdenados = nomesPokemons.stream()
+                .map(name -> new PokemonHighlightDTO(name, VerificaEConverte.destacaCorrespondencia(name, query)))
+                .collect(Collectors.toList());
+
+        return new PokemonResultDTO<>(pokemonsOrdenados);
     }
 
     private List<String> buscaNomesPokemonEmApiExterna() { // busca os nomes a partir do JSON retornado
