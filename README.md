@@ -5,6 +5,8 @@
 Projeto que consiste em realizar uma requisição na **PokéApi** para ordenar todos os pokemons de acordo com o parâmetro que for passado. Utilizei o **WebClient** para consumir a API. Implementei também todas as ordenações de maneira manual, detalhando de forma passo a passo a complexidade do algoritmo desenvolvido **(variação do bubble sort)**. Incluí também exceções personalizadas para tratar erros que possam ocorrer durante a execução da aplicação. Além disso, setei o endpoint que será consumido no `application.properties` para seguir boas práticas e evitar o alto acoplamento. Além disso, realizei a dockerização da aplicação para rodar em qualquer dispositivo que tenha docker instalado.
 
 ## Diagrama detalhado da Arquitetura
+Site utilizado para estudar [Diagrama de Arquitetura](https://c4model.com)
+
 A partir deste diagrama é possível entender a ordem que deveria ocorrer cada comportamento da aplicação.
 ![Modelagem](Arquitetura_Aplicacao.gif)
 
