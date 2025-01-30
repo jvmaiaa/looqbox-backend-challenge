@@ -1,4 +1,4 @@
-# Sistema de gerenciamento de vagas [![NPM](https://img.shields.io/npm/l/react)](https://github.com/jvmaiaa/backend-test-java/blob/master/LICENSE)
+# Aplicação que tem a ideia de um Microsserviço responsável pelo consumo da API de Pokemons  [![NPM](https://img.shields.io/npm/l/react)](https://github.com/jvmaiaa/looqbox-backend-challenge/blob/main/LICENSE)
 
 ## Sobre o projeto
 
